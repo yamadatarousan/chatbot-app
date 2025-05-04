@@ -419,3 +419,6 @@ AIチャットボットは、ユーザーがAIと対話できるウェブアプ�
 ## ライセンス
 
 MITライセンス。詳細は[LICENSE](LICENSE)を参照。
+
+docker-compose exec mysql bash
+mysql -u user -p

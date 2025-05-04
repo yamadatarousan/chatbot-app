@@ -1,7 +1,12 @@
 <?php
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\Api\ChatController;
 
+Route::post('/chat', [ChatController::class, 'handle']);
+Route::get('/chat/history', [ChatController::class, 'history']);
+
+/*
 Route::post('/chat', function (Request $request) {
     try {
         $message = $request->input('message');
@@ -26,3 +31,4 @@ Route::post('/chat', function (Request $request) {
         return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
     }
 });
+*/
