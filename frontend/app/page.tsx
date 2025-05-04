@@ -17,20 +17,16 @@ const Home: React.FC = () => {
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ message }),
       });
-      if (!res.ok) throw new Error('API error');
-      const data = await res.json(); // JSONとしてパース
-      const reply = data.message; // バックエンドが返すメッセージフィールド
+      if (!res.ok) throw new Error('サーバーエラーです');
+      const data: { message: string } = await res.json();
+      const reply = data.message;
       setReplies([...replies, `You: ${message}`, `AI: ${reply}`]);
       setMessage('');
     } catch (error) {
-      setReplies([...replies, `Error: ${(error as Error).message}`]);
+      setReplies([...replies, `エラー: ${(error as Error).message}`]);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') sendMessage();
   };
 
   // 自動スクロール
@@ -64,7 +60,7 @@ const Home: React.FC = () => {
                 className={`max-w-xs md:max-w-md p-3 rounded-lg ${
                   reply.startsWith('You:')
                     ? 'bg-blue-500 text-white'
-                    : reply.startsWith('Error:')
+                    : reply.startsWith('エラー:')
                     ? 'bg-red-100 text-red-800'
                     : 'bg-white text-gray-800 shadow'
                 }`}
@@ -82,7 +78,6 @@ const Home: React.FC = () => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder="メッセージを入力..."
             className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
