@@ -1,123 +1,166 @@
-"use client";
+// frontend/app/page.tsx
+'use client';
+import Image from 'next/image';
+import { useState, useRef, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { v4 as uuidv4 } from "uuid";
+type ChatMessage = {
+  message: string;
+  sender: 'user' | 'ai';
+  created_at: string;
+};
 
-export default function Home() {
-  const [messages, setMessages] = useState<{ sender: string; content: string }[]>([]);
-  const [input, setInput] = useState("");
+const Home: React.FC = () => {
+  const [message, setMessage] = useState('');
+  const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>("");
+  const chatRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // セッションID の初期化
+  // セッションID管理
+  const sessionId = useRef(localStorage.getItem('session_id') || uuidv4()).current;
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      let storedSessionId = localStorage.getItem("session_id");
-      if (!storedSessionId) {
-        storedSessionId = uuidv4();
-        localStorage.setItem("session_id", storedSessionId);
-      }
-      setSessionId(storedSessionId);
-    }
-  }, []);
-
-  // 履歴取得関数
-  const fetchHistory = useCallback(async () => {
-    if (!sessionId) return; // sessionId が空の場合はスキップ
-    try {
-      const response = await fetch(`/api/chat/history?session_id=${sessionId}`);
-      if (!response.ok) throw new Error("Failed to fetch history");
-      const data = await response.json();
-      setMessages(data.map((item: { sender: string; message: string }) => ({
-        sender: item.sender,
-        content: item.message,
-      })));
-    } catch (error) {
-      console.error("Error fetching history:", error);
-    }
+    localStorage.setItem('session_id', sessionId);
   }, [sessionId]);
 
-  // 初回履歴取得
+  // デバッグ用ログ
+  useEffect(() => {
+    console.log('message:', message, 'isLoading:', isLoading);
+  }, [message, isLoading]);
+
+  // テキストエリアの高さを動的に調整
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [message]);
+
+  // 履歴取得
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`http://localhost/api/chat/history?session_id=${sessionId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) throw new Error('履歴の取得に失敗しました');
+      const data: ChatMessage[] = await res.json();
+      setHistory(data);
+    } catch (error) {
+      setHistory([
+        ...history,
+        { message: `エラー: ${(error as Error).message}`, sender: 'ai', created_at: new Date().toISOString() },
+      ]);
+    }
+  };
+
+  // 初回ロード時に履歴を取得
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory]);
+  }, [sessionId]);
 
   // メッセージ送信
-  const handleSend = async () => {
-    if (!input.trim() || !sessionId) return;
+  const sendMessage = async () => {
+    if (!message.trim()) return;
     setIsLoading(true);
-
-    const newMessage = { sender: "user", content: input };
-    setMessages((prev) => [...prev, newMessage]);
-    setInput("");
-
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, message: input }),
+      const res = await fetch('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ message, session_id: sessionId }),
       });
-      if (!response.ok) throw new Error("Failed to send message");
-      const result = await response.json();
-      setMessages((prev) => [...prev, { sender: "ai", content: result.message }]);
+      if (!res.ok) throw new Error('サーバーエラーです');
+      const data: { message: string; session_id: string } = await res.json();
+      await fetchHistory();
+      setMessage('');
     } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages((prev) => [...prev, { sender: "ai", content: "Error occurred." }]);
+      setHistory([
+        ...history,
+        { message: `エラー: ${(error as Error).message}`, sender: 'ai', created_at: new Date().toISOString() },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 入力欄の自動リサイズ
+  // 自動スクロール
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-    }
-  }, [input]);
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+  }, [history]);
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-100 to-emerald-100">
-      <header className="p-4 bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-md">
-        <h1 className="text-2xl font-bold">AI Chatbot</h1>
+    <div className="flex flex-col h-screen bg-gray-50">
+      <header className="bg-gradient-to-r from-blue-600 to-emerald-500 text-white p-4 flex justify-center items-center shadow-lg">
+        <div className="flex space-x-4">
+          <Image src="/icons/globe.svg" alt="Globe" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
+          <Image src="/icons/next.svg" alt="Next.js" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
+          <Image src="/icons/vercel.svg" alt="Vercel" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
+        </div>
+        <h1 className="text-2xl font-bold text-center flex-1">AIチャットボット</h1>
       </header>
-      <main className="flex-1 p-4 overflow-y-auto">
-        <div className="max-w-3xl mx-auto space-y-4">
-          {messages.map((msg, index) => (
+
+      <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+        {history.length === 0 ? (
+          <div className="text-center text-gray-500 mt-10 animate-fade-in">
+            AIとチャットを始めましょう！下にメッセージを入力してください。
+          </div>
+        ) : (
+          history.map((item, index) => (
             <div
               key={index}
-              className={`p-4 rounded-lg shadow-md animate-fade-in ${
-                msg.sender === "user"
-                  ? "bg-gradient-to-r from-blue-300 to-blue-500 text-white ml-auto"
-                  : "bg-gradient-to-r from-gray-200 to-gray-400 text-black mr-auto"
-              } max-w-md`}
+              data-index={index}
+              className={`flex ${item.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
-              {msg.content}
+              <div
+                className={`message-bubble max-w-xs md:max-w-md p-4 rounded-2xl shadow-md ${
+                  item.sender === 'user'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                    : item.message.startsWith('エラー:')
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
+                }`}
+              >
+                <span className="font-semibold">{item.sender === 'user' ? 'You: ' : 'AI: '}</span>
+                {item.message}
+                <div className="text-xs text-gray-400 mt-1 opacity-70 hover:opacity-100 transition-opacity">
+                  {new Date(item.created_at).toLocaleString()}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </main>
-      <footer className="p-4 bg-white shadow-inner">
-        <div className="max-w-3xl mx-auto flex gap-2">
+          ))
+        )}
+      </div>
+
+      <div className="bg-white p-4 border-t shadow-lg">
+        <div className="flex space-x-3 max-w-3xl mx-auto">
           <textarea
             ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-1 p-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type your message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="メッセージを入力..."
+            className="message-input flex-1 p-3 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none shadow-sm"
             rows={1}
           />
           <button
-            onClick={handleSend}
-            disabled={isLoading}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-emerald-500 text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
+            onClick={sendMessage}
+            disabled={!message.trim() || isLoading}
+            className={`send-button px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300 ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+            }`}
           >
-            {isLoading ? "Sending..." : "Send"}
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            ) : (
+              '送信'
+            )}
           </button>
         </div>
-      </footer>
+      </div>
     </div>
   );
-}
+};
+
+export default Home;
