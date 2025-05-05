@@ -1,78 +1,76 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { fetchChatHistory, sendMessage } from '../lib/api';
+"use client";
+
+import { useState, useEffect } from "react";
 
 type ChatMessage = {
-    message: string;
-    sender: 'user' | 'ai';
-    created_at: string;
+  message: string;
+  sender: "user" | "ai";
+  created_at: string;
 };
 
-function getSessionId() {
-    let sessionId = localStorage.getItem('session_id');
-    if (!sessionId) {
-        sessionId = uuidv4();
-        localStorage.setItem('session_id', sessionId);
-    }
-    return sessionId;
-}
-
 export default function ChatHistory() {
-    const sessionId = getSessionId();
-    const [history, setHistory] = useState<ChatMessage[]>([]);
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState<string>("");
 
-    useEffect(() => {
-        async function loadHistory() {
-            try {
-                const data = await fetchChatHistory(sessionId);
-                setHistory(data);
-            } catch (error) {
-                console.error('Error loading history:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadHistory();
-    }, [sessionId]);
+  // セッションID の取得
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedSessionId = localStorage.getItem("session_id") || "";
+      setSessionId(storedSessionId);
+    }
+  }, []);
 
-    const handleSend = async () => {
-        if (!message.trim()) return;
-        try {
-            await sendMessage(sessionId, message);
-            const updatedHistory = await fetchChatHistory(sessionId);
-            setHistory(updatedHistory);
-            setMessage('');
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
+  // 履歴の取得
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`http://localhost/api/chat/history?session_id=${sessionId}`, {
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error("履歴の取得に失敗しました");
+        const data: ChatMessage[] = await response.json();
+        setHistory(data);
+      } catch (error) {
+        setHistory([
+          ...history,
+          { message: `エラー: ${(error as Error).message}`, sender: "ai", created_at: new Date().toISOString() },
+        ]);
+      }
     };
+    fetchHistory();
+  }, [sessionId, history]);
 
-    return (
-        <div className="chat-history">
-            {loading ? (
-                <div>読み込み中...</div>
-            ) : history.length === 0 ? (
-                <div>履歴がありません</div>
-            ) : (
-                history.map((item, index) => (
-                    <div key={index} className={`message ${item.sender}`}>
-                        <strong>{item.sender === 'user' ? 'あなた' : 'AI'}:</strong> {item.message}
-                        <span className="timestamp">{new Date(item.created_at).toLocaleString()}</span>
-                    </div>
-                ))
-            )}
-            <div className="input-area">
-                <input
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="メッセージを入力..."
-                />
-                <button onClick={handleSend}>送信</button>
-            </div>
+  return (
+    <div className="space-y-4">
+      {history.length === 0 ? (
+        <div className="text-center text-gray-500 mt-10 animate-fade-in">
+          履歴がありません。チャットを始めましょう！
         </div>
-    );
+      ) : (
+        history.map((item, index) => (
+          <div
+            key={index}
+            className={`flex ${item.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
+          >
+            <div
+              className={`max-w-xs md:max-w-md p-4 rounded-2xl shadow-md ${
+                item.sender === "user"
+                  ? "bg-gradient-to-r from-blue-500 to-blue-700 text-white"
+                  : item.message.startsWith("エラー:")
+                  ? "bg-red-100 text-red-800"
+                  : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800"
+              }`}
+            >
+              <span className="font-semibold">{item.sender === "user" ? "You: " : "AI: "}</span>
+              {item.message}
+              <div className="text-xs text-gray-400 mt-1 opacity-70 hover:opacity-100 transition-opacity">
+                {new Date(item.created_at).toLocaleString()}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
 }
