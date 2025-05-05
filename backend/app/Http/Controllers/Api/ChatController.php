@@ -5,8 +5,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ChatHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use OpenAI\Laravel\Facades\OpenAI;
 
 class ChatController extends Controller
 {
@@ -21,18 +21,27 @@ class ChatController extends Controller
 
         // OpenAI APIで応答を生成
         try {
-            $result = OpenAI::chat()->create([
-                'model' => 'gpt-3.5-turbo',
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o-mini',
                 'messages' => [
                     ['role' => 'system', 'content' => 'You are a friendly AI assistant.'],
                     ['role' => 'user', 'content' => $message],
                 ],
                 'max_tokens' => 150,
             ]);
-            $response = $result->choices[0]->message->content ?? 'エラー：AI応答を取得できませんでした';
+
+            if ($response->successful()) {
+                $responseText = $response->json()['choices'][0]['message']['content'] ?? 'エラー：AI応答を取得できませんでした';
+            } else {
+                \Log::error('OpenAI API error: ' . json_encode($response->json()));
+                $responseText = 'エラー：AI応答を取得できませんでした';
+            }
         } catch (\Exception $e) {
-            \Log::error('OpenAI API error: ' . $e->getMessage());
-            $response = 'エラー：AI応答を取得できませんでした';
+            \Log::error('OpenAI API exception: ' . $e->getMessage());
+            $responseText = 'エラー：AI応答を取得できませんでした';
         }
 
         // 履歴を保存
@@ -45,7 +54,7 @@ class ChatController extends Controller
             ]);
             ChatHistory::create([
                 'session_id' => $sessionId,
-                'message' => $response,
+                'message' => $responseText,
                 'sender' => 'ai',
             ]);
             $this->limitHistory($sessionId);
@@ -57,7 +66,7 @@ class ChatController extends Controller
         }
 
         return response()->json([
-            'message' => $response,
+            'message' => $responseText,
             'session_id' => $sessionId
         ]);
     }
