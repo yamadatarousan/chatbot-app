@@ -6,6 +6,7 @@ use App\Models\ChatHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use OpenAI\Laravel\Facades\OpenAI;
 
 class ChatController extends Controller
 {
@@ -17,8 +18,24 @@ class ChatController extends Controller
         ]);
         $message = $request->input('message');
         $sessionId = $request->input('session_id', Str::uuid()->toString());
-        $response = $message . '！お元気ですか？';
-    
+
+        // OpenAI APIで応答を生成
+        try {
+            $result = OpenAI::chat()->create([
+                'model' => 'gpt-3.5-turbo',
+                'messages' => [
+                    ['role' => 'system', 'content' => 'You are a friendly AI assistant.'],
+                    ['role' => 'user', 'content' => $message],
+                ],
+                'max_tokens' => 150,
+            ]);
+            $response = $result->choices[0]->message->content ?? 'エラー：AI応答を取得できませんでした';
+        } catch (\Exception $e) {
+            \Log::error('OpenAI API error: ' . $e->getMessage());
+            $response = 'エラー：AI応答を取得できませんでした';
+        }
+
+        // 履歴を保存
         \DB::beginTransaction();
         try {
             ChatHistory::create([
@@ -38,7 +55,7 @@ class ChatController extends Controller
             \Log::error('Failed to save chat history: ' . $e->getMessage());
             throw $e;
         }
-    
+
         return response()->json([
             'message' => $response,
             'session_id' => $sessionId
@@ -52,10 +69,6 @@ class ChatController extends Controller
         ]);
         try {
             $sessionId = $request->input('session_id');
-            if (!$sessionId) {
-                \Log::warning('No session_id provided');
-                return response()->json([], 400);
-            }
             \Log::info('History request for session_id: ' . $sessionId);
             $histories = ChatHistory::where('session_id', $sessionId)
                 ->orderBy('created_at', 'desc')
