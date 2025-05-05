@@ -1,13 +1,55 @@
+// frontend/app/page.tsx
 'use client';
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+
+type ChatMessage = {
+  message: string;
+  sender: 'user' | 'ai';
+  created_at: string;
+};
 
 const Home: React.FC = () => {
   const [message, setMessage] = useState('');
-  const [replies, setReplies] = useState<string[]>([]);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
+  // セッションID管理
+  const sessionId = useRef(localStorage.getItem('session_id') || uuidv4()).current;
+  useEffect(() => {
+    localStorage.setItem('session_id', sessionId);
+  }, [sessionId]);
+
+  // デバッグ用ログ
+  useEffect(() => {
+    console.log('message:', message, 'isLoading:', isLoading);
+  }, [message, isLoading]);
+
+  // 履歴取得
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`http://localhost/api/chat/history?session_id=${sessionId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) throw new Error('履歴の取得に失敗しました');
+      const data: ChatMessage[] = await res.json();
+      setHistory(data);
+    } catch (error) {
+      setHistory([
+        ...history,
+        { message: `エラー: ${(error as Error).message}`, sender: 'ai', created_at: new Date().toISOString() },
+      ]);
+    }
+  };
+
+  // 初回ロード時に履歴を取得
+  useEffect(() => {
+    fetchHistory();
+  }, [sessionId]);
+
+  // メッセージ送信
   const sendMessage = async () => {
     if (!message.trim()) return;
     setIsLoading(true);
@@ -15,15 +57,17 @@ const Home: React.FC = () => {
       const res = await fetch('http://localhost/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, session_id: sessionId }),
       });
       if (!res.ok) throw new Error('サーバーエラーです');
-      const data: { message: string } = await res.json();
-      const reply = data.message;
-      setReplies([...replies, `You: ${message}`, `AI: ${reply}`]);
+      const data: { message: string; session_id: string } = await res.json();
+      await fetchHistory(); // 送信後に履歴を更新
       setMessage('');
     } catch (error) {
-      setReplies([...replies, `エラー: ${(error as Error).message}`]);
+      setHistory([
+        ...history,
+        { message: `エラー: ${(error as Error).message}`, sender: 'ai', created_at: new Date().toISOString() },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -32,7 +76,7 @@ const Home: React.FC = () => {
   // 自動スクロール
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
-  }, [replies]);
+  }, [history]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -46,26 +90,30 @@ const Home: React.FC = () => {
       </header>
 
       <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {replies.length === 0 ? (
+        {history.length === 0 ? (
           <div className="text-center text-gray-500 mt-10">
             AIとチャットを始めましょう！下にメッセージを入力してください。
           </div>
         ) : (
-          replies.map((reply, index) => (
+          history.map((item, index) => (
             <div
               key={index}
-              className={`flex ${reply.startsWith('You:') ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${item.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-xs md:max-w-md p-3 rounded-lg ${
-                  reply.startsWith('You:')
+                  item.sender === 'user'
                     ? 'bg-blue-500 text-white'
-                    : reply.startsWith('エラー:')
+                    : item.message.startsWith('エラー:')
                     ? 'bg-red-100 text-red-800'
                     : 'bg-white text-gray-800 shadow'
                 }`}
               >
-                {reply}
+                {item.sender === 'user' ? 'You: ' : 'AI: '}
+                {item.message}
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(item.created_at).toLocaleString()}
+                </div>
               </div>
             </div>
           ))
@@ -78,6 +126,11 @@ const Home: React.FC = () => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && message.trim() && !isLoading) {
+                sendMessage();
+              }
+            }}
             placeholder="メッセージを入力..."
             className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
