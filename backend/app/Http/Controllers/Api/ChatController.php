@@ -11,6 +11,10 @@ class ChatController extends Controller
 {
     public function handle(Request $request): JsonResponse
     {
+        $request->validate([
+            'message' => 'required|string|max:1000',
+            'session_id' => 'nullable|uuid',
+        ]);
         $message = $request->input('message');
         $sessionId = $request->input('session_id', Str::uuid()->toString());
         $response = $message . '！お元気ですか？';
@@ -43,6 +47,9 @@ class ChatController extends Controller
 
     public function history(Request $request): JsonResponse
     {
+        $request->validate([
+            'session_id' => 'required|uuid',
+        ]);
         try {
             $sessionId = $request->input('session_id');
             if (!$sessionId) {
@@ -60,7 +67,7 @@ class ChatController extends Controller
             \Log::error('History fetch failed: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch history'], 500);
         }
-    }
+    }   
 
     private function limitHistory(string $sessionId): void
     {
