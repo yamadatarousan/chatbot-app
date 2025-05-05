@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css"; // シンタックスハイライトのスタイル（好みに応じて変更）
 
 type ChatMessage = {
   message: string;
@@ -159,7 +162,7 @@ const Home: React.FC = () => {
                 }`}
               >
                 <span className="font-semibold">{item.sender === "user" ? "You: " : "AI: "}</span>
-                {item.message}
+                <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{item.message}</ReactMarkdown>
                 <div className="text-xs text-gray-400 mt-1 opacity-70 hover:opacity-100 transition-opacity">
                   {new Date(item.created_at).toLocaleString()}
                 </div>

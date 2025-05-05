@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css"; // シンタックスハイライトのスタイル
 
 type ChatMessage = {
   message: string;
@@ -54,7 +57,7 @@ export default function ChatHistory() {
             className={`flex ${item.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
           >
             <div
-              className={`max-w-xs md:max-w-md p-4 rounded-2xl shadow-md ${
+              className={`max-w-full sm:max-w-md p-4 rounded-2xl shadow-md break-words ${
                 item.sender === "user"
                   ? "bg-gradient-to-r from-blue-500 to-blue-700 text-white"
                   : item.message.startsWith("エラー:")
@@ -63,7 +66,7 @@ export default function ChatHistory() {
               }`}
             >
               <span className="font-semibold">{item.sender === "user" ? "You: " : "AI: "}</span>
-              {item.message}
+              <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{item.message}</ReactMarkdown>
               <div className="text-xs text-gray-400 mt-1 opacity-70 hover:opacity-100 transition-opacity">
                 {new Date(item.created_at).toLocaleString()}
               </div>
