@@ -1,50 +1,78 @@
+/* frontend/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-gray-50 text-gray-900 antialiased;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* frontend/app/globals.css */
 .chat-history {
   max-width: 800px;
   margin: 0 auto;
 }
-.message {
-  margin: 10px 0;
-  padding: 10px;
-  border-radius: 5px;
+
+/* メッセージバブル */
+.message-bubble {
+  @apply relative transition-all duration-300;
 }
-.message.user {
-  background-color: #e6f3ff;
-  text-align: right;
+
+/* テキストエリア */
+.message-input {
+  @apply flex-1 p-3 bg-white border-0 rounded-xl shadow-sm;
+  min-height: 48px;
+  max-height: 200px;
+  overflow-y: auto;
+  transition: all 0.2s ease;
+  background: linear-gradient(to right, #ffffff, #f9fafb);
 }
-.message.ai {
-  background-color: #f0f0f0;
-  text-align: left;
+
+.message-input:focus {
+  @apply ring-2 ring-blue-500 shadow-md;
+  background: linear-gradient(to right, #ffffff, #e6f3ff);
 }
-.timestamp {
-  font-size: 0.8em;
-  color: #666;
+
+/* 送信ボタン */
+.send-button {
+  @apply bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-semibold rounded-xl shadow-md;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  @apply scale-105 shadow-lg;
+}
+
+.send-button:disabled {
+  @apply bg-gray-400 cursor-not-allowed;
+}
+
+/* アニメーション */
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+  animation-delay: calc(attr(data-index) * 0.1s);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+  .message-bubble {
+    @apply max-w-[80%];
+  }
+  .message-input {
+    @apply text-sm p-2;
+    min-height: 40px;
+  }
+  .send-button {
+    @apply px-4 py-2 text-sm;
+  }
 }

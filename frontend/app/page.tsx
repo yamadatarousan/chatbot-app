@@ -32,8 +32,8 @@ const Home: React.FC = () => {
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto'; // リセット
-      textarea.style.height = `${textarea.scrollHeight}px`; // 内容に合わせて高さを設定
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [message]);
 
@@ -71,7 +71,7 @@ const Home: React.FC = () => {
       });
       if (!res.ok) throw new Error('サーバーエラーです');
       const data: { message: string; session_id: string } = await res.json();
-      await fetchHistory(); // 送信後に履歴を更新
+      await fetchHistory();
       setMessage('');
     } catch (error) {
       setHistory([
@@ -89,39 +89,40 @@ const Home: React.FC = () => {
   }, [history]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+    <div className="flex flex-col h-screen bg-gray-50">
+      <header className="bg-gradient-to-r from-blue-600 to-emerald-500 text-white p-4 flex justify-center items-center shadow-lg">
         <div className="flex space-x-4">
-          <Image src="/icons/globe.svg" alt="Globe" width={100} height={24} priority />
-          <Image src="/icons/next.svg" alt="Next.js" width={100} height={24} priority />
-          <Image src="/icons/vercel.svg" alt="Vercel" width={100} height={24} priority />
+          <Image src="/icons/globe.svg" alt="Globe" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
+          <Image src="/icons/next.svg" alt="Next.js" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
+          <Image src="/icons/vercel.svg" alt="Vercel" width={100} height={24} priority className="hover:scale-110 transition-transform duration-300" />
         </div>
-        <h1 className="text-xl font-semibold text-gray-800">AIチャットボット</h1>
+        <h1 className="text-2xl font-bold text-center flex-1">AIチャットボット</h1>
       </header>
 
-      <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
         {history.length === 0 ? (
-          <div className="text-center text-gray-500 mt-10">
+          <div className="text-center text-gray-500 mt-10 animate-fade-in">
             AIとチャットを始めましょう！下にメッセージを入力してください。
           </div>
         ) : (
           history.map((item, index) => (
             <div
               key={index}
-              className={`flex ${item.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              data-index={index}
+              className={`flex ${item.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               <div
-                className={`max-w-xs md:max-w-md p-3 rounded-lg ${
+                className={`message-bubble max-w-xs md:max-w-md p-4 rounded-2xl shadow-md ${
                   item.sender === 'user'
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                     : item.message.startsWith('エラー:')
                     ? 'bg-red-100 text-red-800'
-                    : 'bg-white text-gray-800 shadow'
+                    : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
                 }`}
               >
-                {item.sender === 'user' ? 'You: ' : 'AI: '}
+                <span className="font-semibold">{item.sender === 'user' ? 'You: ' : 'AI: '}</span>
                 {item.message}
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-400 mt-1 opacity-70 hover:opacity-100 transition-opacity">
                   {new Date(item.created_at).toLocaleString()}
                 </div>
               </div>
@@ -130,24 +131,31 @@ const Home: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white p-4 border-t shadow-sm">
-        <div className="flex space-x-2 max-w-3xl mx-auto">
+      <div className="bg-white p-4 border-t shadow-lg">
+        <div className="flex space-x-3 max-w-3xl mx-auto">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="メッセージを入力..."
-            className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="message-input flex-1 p-3 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none shadow-sm"
             rows={1}
           />
           <button
             onClick={sendMessage}
             disabled={!message.trim() || isLoading}
-            className={`px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 transition-colors ${
-              isLoading ? 'opacity-50' : ''
+            className={`send-button px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300 ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
             }`}
           >
-            {isLoading ? '送信中...' : '送信'}
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            ) : (
+              '送信'
+            )}
           </button>
         </div>
       </div>
