@@ -30,7 +30,7 @@ class ChatController extends Controller
                     ['role' => 'system', 'content' => 'You are a friendly AI assistant.'],
                     ['role' => 'user', 'content' => $message],
                 ],
-                'max_tokens' => 150,
+                'max_tokens' => 4096
             ]);
 
             if ($response->successful()) {
