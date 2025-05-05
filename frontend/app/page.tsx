@@ -126,11 +126,6 @@ const Home: React.FC = () => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && message.trim() && !isLoading) {
-                sendMessage();
-              }
-            }}
             placeholder="メッセージを入力..."
             className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
