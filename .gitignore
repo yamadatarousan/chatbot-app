@@ -1,3 +1,4 @@
 vendor/
 node_modules/
 .env
+backend/storage/logs/laravel.log
