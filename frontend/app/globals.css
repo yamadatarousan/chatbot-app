@@ -25,3 +25,26 @@ body {
     text-wrap: balance;
   }
 }
+
+/* frontend/app/globals.css */
+.chat-history {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.message {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 5px;
+}
+.message.user {
+  background-color: #e6f3ff;
+  text-align: right;
+}
+.message.ai {
+  background-color: #f0f0f0;
+  text-align: left;
+}
+.timestamp {
+  font-size: 0.8em;
+  color: #666;
+}
