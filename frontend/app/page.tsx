@@ -78,7 +78,9 @@ const Home: React.FC = () => {
         body: JSON.stringify({ message, session_id: sessionId }),
       });
       if (!res.ok) throw new Error("サーバーエラーです");
-      await fetchHistory(); // data を使用せず、履歴を再取得
+      const data: { message: string; session_id: string } = await res.json();
+      console.log("AI Response:", data.message); // デバッグ用
+      await fetchHistory();
       setMessage("");
     } catch (error) {
       setHistory([
@@ -90,9 +92,17 @@ const Home: React.FC = () => {
     }
   };
 
-  // 自動スクロール
+  // 自動スクロール（最下部にいる場合のみ）
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+    const chatContainer = chatRef.current;
+    if (!chatContainer) return;
+
+    const isAtBottom =
+      chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 50;
+
+    if (isAtBottom) {
+      chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: "smooth" });
+    }
   }, [history]);
 
   return (
@@ -140,7 +150,7 @@ const Home: React.FC = () => {
               className={`flex ${item.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
             >
               <div
-                className={`message-bubble max-w-xs md:max-w-md p-4 rounded-2xl shadow-md ${
+                className={`message-bubble max-w-full sm:max-w-md p-4 rounded-2xl shadow-md break-words ${
                   item.sender === "user"
                     ? "bg-gradient-to-r from-blue-500 to-blue-700 text-white"
                     : item.message.startsWith("エラー:")
