@@ -80,7 +80,7 @@ class ChatController extends Controller
             $sessionId = $request->input('session_id');
             \Log::info('History request for session_id: ' . $sessionId);
             $histories = ChatHistory::where('session_id', $sessionId)
-                ->orderBy('created_at', 'desc')
+                ->orderBy('created_at', 'asc') // 新しいメッセージが下に表示
                 ->take(100)
                 ->get(['message', 'sender', 'created_at']);
             \Log::info('Found histories: ' . $histories->toJson());
