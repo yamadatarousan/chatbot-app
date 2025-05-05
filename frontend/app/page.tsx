@@ -15,6 +15,7 @@ const Home: React.FC = () => {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // セッションID管理
   const sessionId = useRef(localStorage.getItem('session_id') || uuidv4()).current;
@@ -26,6 +27,15 @@ const Home: React.FC = () => {
   useEffect(() => {
     console.log('message:', message, 'isLoading:', isLoading);
   }, [message, isLoading]);
+
+  // テキストエリアの高さを動的に調整
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // リセット
+      textarea.style.height = `${textarea.scrollHeight}px`; // 内容に合わせて高さを設定
+    }
+  }, [message]);
 
   // 履歴取得
   const fetchHistory = async () => {
@@ -122,12 +132,13 @@ const Home: React.FC = () => {
 
       <div className="bg-white p-4 border-t shadow-sm">
         <div className="flex space-x-2 max-w-3xl mx-auto">
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="メッセージを入力..."
-            className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            rows={1}
           />
           <button
             onClick={sendMessage}
